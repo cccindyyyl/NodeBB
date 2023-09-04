@@ -16,7 +16,7 @@ interface Helpers {
         controller: (req: any, res: any, next: any) => Promise<any> | void) => void;
     setupApiRoute: (router: any, verb: string, name: string, middlewares: any[], controller: any) => void;
     tryRoute: (controller: (req: any, res: any, next: any) => void | Promise<any>,
-     handler?: (err: any, res: any) => void) => (req: any, res: any, next: any) => void | Promise<any>;
+     handler?: (err: any, res: any) => Promise<any>) => (req: any, res: any, next: any) => Promise<any> | void;
 }
 const helpers = {} as Helpers;
 
@@ -110,11 +110,8 @@ helpers.setupApiRoute = function (...args) {
 
     // The next line calls router which is in a module that has not been updated to TS yet
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    router[verb](name, middlewares, helpers.tryRoute(controller, (err, res) => {
-        // The next line calls controllerHelpers.formatApiResponse
-        // which is in a module that has not been updated to TS yet
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        controllerHelpers.formatApiResponse(400, res, err);
+    router[verb](name, middlewares, helpers.tryRoute(controller, async (err, res) => {
+        await controllerHelpers.formatApiResponse(400, res, err);
     }));
 };
 
