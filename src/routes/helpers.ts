@@ -1,9 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Reference: https://www.typescriptlang.org/docs/handbook/migrating-from-javascript.html
 // Used github copilot for some type inference
 import winston = require('winston');
 import middleware = require('../middleware');
 import controllerHelpers = require('../controllers/helpers');
 
+// The anys are typed because there is no way of determining the exact types of the arguments
+// since other files are not translated to TS yet
+/* eslint-disable @typescript-eslint/no-explicit-any */
 interface Helpers {
     setupPageRoute: (
         router: any,
@@ -111,7 +115,15 @@ helpers.setupApiRoute = function (...args) {
     // The next line calls router which is in a module that has not been updated to TS yet
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     router[verb](name, middlewares, helpers.tryRoute(controller, async (err, res) => {
-        await controllerHelpers.formatApiResponse(400, res, err);
+        try {
+            await controllerHelpers.formatApiResponse(400, res, err);
+        } catch (err) {
+            // Reference: https://kentcdodds.com/blog/get-a-catch-block-error-message-with-typescript
+            let message: string;
+            if (err instanceof Error) message = err.message;
+            else message = String(err);
+            return winston.error(`[helpers.setupApiRoute(${name})] ${message}`);
+        }
     }));
 };
 

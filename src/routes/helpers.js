@@ -8,6 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Reference: https://www.typescriptlang.org/docs/handbook/migrating-from-javascript.html
 // Used github copilot for some type inference
 const winston = require("winston");
@@ -87,12 +88,20 @@ helpers.setupApiRoute = function (...args) {
     ];
     // The next line calls router which is in a module that has not been updated to TS yet
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    router[verb](name, middlewares, helpers.tryRoute(controller, (err, res) => {
-        // The next line calls controllerHelpers.formatApiResponse
-        // which is in a module that has not been updated to TS yet
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        controllerHelpers.formatApiResponse(400, res, err);
-    }));
+    router[verb](name, middlewares, helpers.tryRoute(controller, (err, res) => __awaiter(this, void 0, void 0, function* () {
+        try {
+            yield controllerHelpers.formatApiResponse(400, res, err);
+        }
+        catch (err) {
+            // Reference: https://kentcdodds.com/blog/get-a-catch-block-error-message-with-typescript
+            let message;
+            if (err instanceof Error)
+                message = err.message;
+            else
+                message = String(err);
+            return winston.error(`[helpers.setupApiRoute(${name})] ${message}`);
+        }
+    })));
 };
 helpers.tryRoute = function (controller, handler) {
     // `handler` is optional
