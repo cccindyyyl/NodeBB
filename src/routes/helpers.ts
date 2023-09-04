@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // Reference: https://www.typescriptlang.org/docs/handbook/migrating-from-javascript.html
 // Used github copilot for some type inference
+import { RequestHandler, Router } from 'express';
 import winston = require('winston');
 import middleware = require('../middleware');
 import controllerHelpers = require('../controllers/helpers');
@@ -10,32 +10,31 @@ import controllerHelpers = require('../controllers/helpers');
 /* eslint-disable @typescript-eslint/no-explicit-any */
 interface Helpers {
     setupPageRoute: (
-        router: any,
+        router: Router,
         name: string,
         middleware: any,
         middlewares: any[],
-        controller: (req: any, res: any, next: any) => Promise<any> | void) => void;
+        controller: ((req: any, res: any, next: any) => Promise<any> | void)) => void;
     setupAdminPageRoute: (
-        router: any, name: string, middleware: any, middlewares: any[],
-        controller: (req: any, res: any, next: any) => Promise<any> | void) => void;
-    setupApiRoute: (router: any, verb: string, name: string, middlewares: any[], controller: any) => void;
+        router: Router, name: string, middleware: any, middlewares: any[],
+        controller: (req: any, res: any, next: any) => (Promise<any> | void)) => void;
+    setupApiRoute: (router: Router, verb: string, name: string, middlewares: any[],
+        controller: (req: any, res: any, next: any) => (Promise<any>)) => void;
     tryRoute: (controller: (req: any, res: any, next: any) => void | Promise<any>,
-     handler?: (err: any, res: any) => Promise<any>) => (req: any, res: any, next: any) => Promise<any> | void;
+        handler?: (err: any, res: any) => Promise<any>) => (req: any, res: any, next: any) => Promise<any> | void;
 }
 const helpers = {} as Helpers;
 
 // router, name, middleware(deprecated), middlewares(optional), controller
 helpers.setupPageRoute = function (...args) {
-    // The next line calls router which is in a module that has not been updated to TS yet
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const [router, name] = args;
     // The next line calls middlewares which is an array consisting of middleware attributes,
     // and middleware is in a module that has not been updated to TS yet
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     let middlewares: any[] = args.length > 3 ? args[args.length - 2] : [] as any[];
 
-    const controller: (req: any, res: any, next: any) => Promise<any> =
-    args[args.length - 1] as (req: any, res: any, next: any) => Promise<any>;
+    const controller: ((req: any, res: any, next: any) => Promise<any> | void) =
+    args[args.length - 1] as ((req: any, res: any, next: any) => Promise<any> | void);
 
     if (args.length === 5) {
         winston.warn(`[helpers.setupPageRoute(${name})] passing \`middleware\`as the third param is deprecated, it can now be safely removed`);
@@ -53,51 +52,50 @@ helpers.setupPageRoute = function (...args) {
         middleware.pageView,
     ];
 
-    // The next line calls router.get which is in a module that has not been updated to TS yet
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    const buildHeader: RequestHandler = middleware.buildHeader as RequestHandler;
+
     router.get(
         name,
         middleware.busyCheck,
         middlewares,
-        middleware.buildHeader,
-        helpers.tryRoute(controller)
+        buildHeader,
+        helpers.tryRoute(controller) as (req: any, res: any, next: any) => void,
     );
-    // The next line calls router.get which is in a module that has not been updated to TS yet
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    router.get(`/api${name}`, middlewares, helpers.tryRoute(controller));
+
+    router.get(`/api${name}`, middlewares, helpers.tryRoute(controller) as (req: any, res: any, next: any) => void);
 };
 
 // router, name, middleware(deprecated), middlewares(optional), controller
 helpers.setupAdminPageRoute = function (...args) {
-    // The next line calls router which is in a module that has not been updated to TS yet
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const [router, name] = args;
     // The next line calls middlewares which is an array consisting of middleware attributes,
     // and middleware is in a module that has not been updated to TS yet
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const middlewares = args.length > 3 ? args[args.length - 2] : [];
-    const controller: (req: any, res: any, next: any) => Promise<any> =
-    args[args.length - 1] as (req: any, res: any, next: any) => Promise<any>;
+    const middlewares: any[] = args.length > 3 ? args[args.length - 2] : [] as any[];
+    const controller: (req: any, res: any, next: any) => Promise<any> | void =
+    args[args.length - 1] as (req: any, res: any, next: any) => Promise<any> | void;
     if (args.length === 5) {
         winston.warn(`[helpers.setupAdminPageRoute(${name})] passing \`middleware\` as the third param is deprecated, it can now be safely removed`);
     }
-    // The next line calls router.get which is in a module that has not been updated to TS yet
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    router.get(name, middleware.admin.buildHeader, middlewares, helpers.tryRoute(controller));
-    // The next line calls router.get which is in a module that has not been updated to TS yet
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    router.get(`/api${name}`, middlewares, helpers.tryRoute(controller));
+
+    router.get(
+        name,
+        // The next line calls middleware which is in a module that has not been updated to TS yet
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+        middleware.admin.buildHeader,
+        middlewares,
+        helpers.tryRoute(controller) as (req: any, res: any, next: any) => void
+    );
+    router.get(`/api${name}`, middlewares, helpers.tryRoute(controller) as (req: any, res: any, next: any) => void);
 };
 
 // router, verb, name, middlewares(optional), controller
 helpers.setupApiRoute = function (...args) {
-    // The next line calls router which is in a module that has not been updated to TS yet
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const [router, verb, name] = args;
     // The next line calls middlewares which is an array consisting of middleware attributes,
     // and middleware is in a module that has not been updated to TS yet
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    let middlewares = args.length > 4 ? args[args.length - 2] : [];
+    let middlewares: any[] = args.length > 4 ? args[3] : [] as any[];
     const controller: (req: any, res: any, next: any) => Promise<any> =
     args[args.length - 1] as (req: any, res: any, next: any) => Promise<any>;
 
@@ -112,7 +110,7 @@ helpers.setupApiRoute = function (...args) {
         ...middlewares,
     ];
 
-    // The next line calls router which is in a module that has not been updated to TS yet
+    // The next line calls router[verb] which is in a module that has not been updated to TS yet
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     router[verb](name, middlewares, helpers.tryRoute(controller, async (err, res) => {
         try {
@@ -124,15 +122,17 @@ helpers.setupApiRoute = function (...args) {
             else message = String(err);
             return winston.error(`[helpers.setupApiRoute(${name})] ${message}`);
         }
-    }));
+    }) as (req: any, res: any, next: any) => void);
 };
 
 helpers.tryRoute = function (controller, handler?) {
     // `handler` is optional
     if (controller && controller.constructor && controller.constructor.name === 'AsyncFunction') {
+        const controllerPromise: (req: any, res: any, next: any) => Promise<any> =
+        controller as (req: any, res: any, next: any) => Promise<any>;
         return async function (req, res, next) {
             try {
-                await controller(req, res, next);
+                await controllerPromise(req, res, next);
             } catch (err) {
                 if (handler) {
                     return handler(err, res);
